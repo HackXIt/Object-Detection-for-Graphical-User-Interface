@@ -68,7 +68,18 @@ if __name__ == "__main__":
     # If specified we start from checkpoint
     if opt.pretrained_weights:
         if opt.pretrained_weights.endswith(".pth"):
-            model.load_state_dict(torch.load(opt.pretrained_weights))
+            pretrained_dict = torch.load(opt.pretrained_weights)
+            try:
+                model.load_state_dict(pretrained_dict)
+            except RuntimeError as e:
+                print("Ignoring incompatible weights due to size mismatch: ", e)
+                # Filter out unnecessary keys
+                model_dict = model.state_dict()
+                pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
+                # Overwrite entries in the existing state dict
+                model_dict.update(pretrained_dict) 
+                # Load the new state dict
+                model.load_state_dict(model_dict)
         else:
             model.load_darknet_weights(opt.pretrained_weights)
 
